@@ -231,4 +231,5 @@ type GasEstimator interface {
 // pending state.
 type PendingStateEventer interface {
 	SubscribePendingTransactions(ctx context.Context, ch chan<- *types.Transaction) (Subscription, error)
+	SubscribePendingTransactionsDetail(ctx context.Context, ch chan<- *types.Transaction) (Subscription, error)
 }

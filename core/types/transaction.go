@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -56,6 +57,92 @@ type Transaction struct {
 	hash atomic.Value
 	size atomic.Value
 	from atomic.Value
+}
+
+type TransactionDetail struct {
+	// From  *common.Address `json:"from"`
+	// To    *common.Address `json:"to"`
+	// Type  string          `json:"type"`
+	// Nonce string          `json:"nonce"`
+
+	// GasPrice  string `json:"gasPrice"`             // wei per gas
+	// GasTipCap string `json:"maxPriorityFeePerGas"` // a.k.a. maxPriorityFeePerGas
+	// GasFeeCap string `json:"maxFeePerGas"`         // a.k.a. maxFeePerGas
+
+	// Gas   string      `json:"gas"`   // gas limit
+	// Value string      `json:"value"` // wei amount
+	// Data  string      `json:"input"` // contract invocation input data
+	// Hash  common.Hash `json:"hash"`
+
+	// ReceiveTime int64 `json:"receiveTime"`
+
+	// BlockHash        *common.Hash      `json:"blockHash"`
+	// BlockNumber      *hexutil.Big      `json:"blockNumber"`
+	From      common.Address  `json:"from"`
+	Gas       hexutil.Uint64  `json:"gas"`
+	GasPrice  *hexutil.Big    `json:"gasPrice"`
+	GasFeeCap *hexutil.Big    `json:"maxFeePerGas,omitempty"`
+	GasTipCap *hexutil.Big    `json:"maxPriorityFeePerGas,omitempty"`
+	Hash      common.Hash     `json:"hash"`
+	Input     hexutil.Bytes   `json:"input"`
+	Nonce     hexutil.Uint64  `json:"nonce"`
+	To        *common.Address `json:"to"`
+	// TransactionIndex *hexutil.Uint64   `json:"transactionIndex"`
+	Value    *hexutil.Big   `json:"value"`
+	Type     hexutil.Uint64 `json:"type"`
+	Accesses *AccessList    `json:"accessList,omitempty"`
+	ChainID  *hexutil.Big   `json:"chainId,omitempty"`
+	V        *hexutil.Big   `json:"v"`
+	R        *hexutil.Big   `json:"r"`
+	S        *hexutil.Big   `json:"s"`
+}
+
+func NewTransactionDetail(tx *Transaction) *TransactionDetail {
+	// signer := types.MakeSigner(config, big.NewInt(0).SetUint64(blockNumber))
+	// from, _ := types.Sender(signer, tx)
+	sigCache := tx.from.Load().(sigCache)
+
+	v, r, s := tx.RawSignatureValues()
+	result := &TransactionDetail{
+		Type:     hexutil.Uint64(tx.Type()),
+		From:     sigCache.from,
+		Gas:      hexutil.Uint64(tx.Gas()),
+		GasPrice: (*hexutil.Big)(tx.GasPrice()),
+		Hash:     tx.Hash(),
+		Input:    hexutil.Bytes(tx.Data()),
+		Nonce:    hexutil.Uint64(tx.Nonce()),
+		To:       tx.To(),
+		Value:    (*hexutil.Big)(tx.Value()),
+		V:        (*hexutil.Big)(v),
+		R:        (*hexutil.Big)(r),
+		S:        (*hexutil.Big)(s),
+	}
+	// if blockHash != (common.Hash{}) {
+	// 	result.BlockHash = &blockHash
+	// 	result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
+	// 	result.TransactionIndex = (*hexutil.Uint64)(&index)
+	// }
+	switch tx.Type() {
+	case AccessListTxType:
+		al := tx.AccessList()
+		result.Accesses = &al
+		result.ChainID = (*hexutil.Big)(tx.ChainId())
+	case DynamicFeeTxType:
+		al := tx.AccessList()
+		result.Accesses = &al
+		result.ChainID = (*hexutil.Big)(tx.ChainId())
+		result.GasFeeCap = (*hexutil.Big)(tx.GasFeeCap())
+		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
+		// if the transaction has been mined, compute the effective gas price
+		// if baseFee != nil && blockHash != (common.Hash{}) {
+		// 	// price = min(tip, gasFeeCap - baseFee) + baseFee
+		// 	price := math.BigMin(new(big.Int).Add(tx.GasTipCap(), baseFee), tx.GasFeeCap())
+		// 	result.GasPrice = (*hexutil.Big)(price)
+		// } else {
+		// 	result.GasPrice = (*hexutil.Big)(tx.GasFeeCap())
+		// }
+	}
+	return result
 }
 
 // NewTx creates a new transaction.

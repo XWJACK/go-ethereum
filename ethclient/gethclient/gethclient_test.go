@@ -126,6 +126,9 @@ func TestGethClient(t *testing.T) {
 			"TestSubscribePendingTxs",
 			func(t *testing.T) { testSubscribePendingTransactions(t, client) },
 		}, {
+			"TestSubscribePendingTxsDetail",
+			func(t *testing.T) { testSubscribePendingTransactionsDetail(t, client) },
+		}, {
 			"TestCallContract",
 			func(t *testing.T) { testCallContract(t, client) },
 		},
@@ -295,6 +298,40 @@ func testSubscribePendingTransactions(t *testing.T, client *rpc.Client) {
 	hash := <-ch
 	if hash != signedTx.Hash() {
 		t.Fatalf("Invalid tx hash received, got %v, want %v", hash, signedTx.Hash())
+	}
+}
+
+func testSubscribePendingTransactionsDetail(t *testing.T, client *rpc.Client) {
+	ec := New(client)
+	ethcl := ethclient.NewClient(client)
+	// Subscribe to Transactions
+	ch := make(chan types.Transaction)
+	ec.SubscribePendingTransactionsDetail(context.Background(), ch)
+	// Send a transaction
+	chainID, err := ethcl.ChainID(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Create transaction
+	tx := types.NewTransaction(1, common.Address{1}, big.NewInt(1), 22000, big.NewInt(1), nil)
+	signer := types.LatestSignerForChainID(chainID)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), testKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedTx, err := tx.WithSignature(signer, signature)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Send transaction
+	err = ethcl.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Check that the transaction was send over the channel
+	txDetail := <-ch
+	if txDetail.Hash() != signedTx.Hash() {
+		t.Fatalf("Invalid tx detail received, got %v, want %v", txDetail.Hash(), signedTx.Hash())
 	}
 }
 

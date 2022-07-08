@@ -100,6 +100,11 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 	nonceLock := new(AddrLocker)
 	return []rpc.API{
 		{
+			Namespace: "ext",
+			Version:   "1.0",
+			Service:   NewExtensionEthereumAPI(apiBackend, *NewPublicEthereumAPI((apiBackend)), *NewPublicBlockChainAPI(apiBackend)),
+			Public:    true,
+		}, {
 			Namespace: "eth",
 			Version:   "1.0",
 			Service:   NewPublicEthereumAPI(apiBackend),

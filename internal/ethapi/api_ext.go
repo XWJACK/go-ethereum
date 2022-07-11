@@ -132,10 +132,14 @@ func (s *ExtensionEthereumAPI) GetTransactionError(ctx context.Context, hash com
 func (s *ExtensionEthereumAPI) PricedTransactions(limit int) []*RPCTransaction {
 	curHeader := s.b.CurrentHeader()
 
+	priced := s.b.TxPoolPriced()
 	if limit == 0 {
 		limit = 300
 	}
-	priced := s.b.TxPoolPriced()[:limit]
+	if len(priced) < limit {
+		limit = len(priced)
+	}
+	priced = priced[:limit]
 	transactions := make([]*RPCTransaction, 0, len(priced))
 	for _, tx := range priced {
 		transactions = append(transactions, newRPCPendingTransaction(tx, curHeader, s.b.ChainConfig()))

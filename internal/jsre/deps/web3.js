@@ -5449,6 +5449,19 @@ var methods = function () {
         params: 0
     });
 
+    var hasCode = new Method({
+        name: 'hasCode',
+        call: 'ext_hasCode',
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter]
+    });
+
+    var getTransactionError = new Method({
+        name: 'getTransactionError',
+        call: 'ext_getTransactionError',
+        params: 1,
+    });
+
     return [
         getBalance,
         getStorageAt,
@@ -5472,7 +5485,9 @@ var methods = function () {
         compileLLL,
         compileSerpent,
         submitWork,
-        getWork
+        getWork,
+        hasCode,
+        getTransactionError,
     ];
 };
 

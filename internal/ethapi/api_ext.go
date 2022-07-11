@@ -54,15 +54,22 @@ import (
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
 // It offers only methods that operate on public data that is freely available to anyone.
+/**
+ * ext_hasCode(address, blockNumber/blockHash)
+ * ext_getTransactionError(hash)
+ * ext_pricedTransactions(limit = 300) -1: all, 0: [0~300]
+ */
 type ExtensionEthereumAPI struct {
-	b          Backend
-	ethereum   PublicEthereumAPI
-	blockChain PublicBlockChainAPI
+	b               Backend
+	ethereum        PublicEthereumAPI
+	blockChain      PublicBlockChainAPI
+	transactionPool PublicTransactionPoolAPI
+	txpool          PublicTxPoolAPI
 }
 
 // NewExtensionEthereumAPI creates custom Ethereum protocol API.
-func NewExtensionEthereumAPI(b Backend, ethereum PublicEthereumAPI, blockChain PublicBlockChainAPI) *ExtensionEthereumAPI {
-	return &ExtensionEthereumAPI{b, ethereum, blockChain}
+func NewExtensionEthereumAPI(b Backend, ethereum PublicEthereumAPI, blockChain PublicBlockChainAPI, transactionPool PublicTransactionPoolAPI, txpool PublicTxPoolAPI) *ExtensionEthereumAPI {
+	return &ExtensionEthereumAPI{b, ethereum, blockChain, transactionPool, txpool}
 }
 
 // HasCode returns boolean the code stored at the given address in the state for the given block number.
@@ -97,68 +104,44 @@ func (s *ExtensionEthereumAPI) GetTransactionError(ctx context.Context, hash com
 	return nil, nil
 }
 
-// // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
-// func (s *TransactionAPI) GetTransactionReceiptWithError(ctx context.Context, hash common.Hash, overrides *StateOverride) (map[string]interface{}, error) {
-// 	tx, blockHash, blockNumber, index, err := s.b.GetTransaction(ctx, hash)
-// 	if err != nil {
-// 		// When the transaction doesn't exist, the RPC method should return JSON null
-// 		// as per specification.
-// 		return nil, nil
-// 	}
-// 	receipts, err := s.b.GetReceipts(ctx, blockHash)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if len(receipts) <= int(index) {
-// 		return nil, nil
-// 	}
-// 	receipt := receipts[index]
+// // PendingTransactions returns the transactions that are in the transaction pool
+// // and have a from address that is one of the accounts this node manages.
+// func (s *ExtensionEthereumAPI) SearchTransactions(address common.Address, from rpc.BlockNumberOrHash, to rpc.BlockNumberOrHash) ([]*RPCTransaction, error) {
 
-// 	// Derive the sender.
-// 	bigblock := new(big.Int).SetUint64(blockNumber)
-// 	signer := types.MakeSigner(s.b.ChainConfig(), bigblock)
-// 	from, _ := types.Sender(signer, tx)
-
-// 	fields := map[string]interface{}{
-// 		"blockHash":         blockHash,
-// 		"blockNumber":       hexutil.Uint64(blockNumber),
-// 		"transactionHash":   hash,
-// 		"transactionIndex":  hexutil.Uint64(index),
-// 		"from":              from,
-// 		"to":                tx.To(),
-// 		"gasUsed":           hexutil.Uint64(receipt.GasUsed),
-// 		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
-// 		"contractAddress":   nil,
-// 		"logs":              receipt.Logs,
-// 		"logsBloom":         receipt.Bloom,
-// 		"type":              hexutil.Uint(tx.Type()),
-// 	}
-// 	// Assign the effective gas price paid
-// 	if !s.b.ChainConfig().IsLondon(bigblock) {
-// 		fields["effectiveGasPrice"] = hexutil.Uint64(tx.GasPrice().Uint64())
-// 	} else {
-// 		header, err := s.b.HeaderByHash(ctx, blockHash)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		gasPrice := new(big.Int).Add(header.BaseFee, tx.EffectiveGasTipValue(header.BaseFee))
-// 		fields["effectiveGasPrice"] = hexutil.Uint64(gasPrice.Uint64())
-// 	}
-// 	// Assign receipt status or post state.
-// 	if len(receipt.PostState) > 0 {
-// 		fields["root"] = hexutil.Bytes(receipt.PostState)
-// 	} else {
-// 		fields["status"] = hexutil.Uint(receipt.Status)
-// 	}
-// 	if receipt.Logs == nil {
-// 		fields["logs"] = []*types.Log{}
-// 	}
-// 	// If the ContractAddress is 20 0x0 bytes, assume it is not a contract creation
-// 	if receipt.ContractAddress != (common.Address{}) {
-// 		fields["contractAddress"] = receipt.ContractAddress
-// 	}
-// 	return fields, nil
+// 	// pending, err := s.b.GetPoolTransactions()
+// 	// if err != nil {
+// 	// 	return nil, err
+// 	// }
+// 	// // accounts := make(map[common.Address]struct{})
+// 	// // for _, wallet := range s.b.AccountManager().Wallets() {
+// 	// // 	for _, account := range wallet.Accounts() {
+// 	// // 		accounts[account.Address] = struct{}{}
+// 	// // 	}
+// 	// // }
+// 	// curHeader := s.b.CurrentHeader()
+// 	// transactions := make([]*RPCTransaction, 0, len(pending))
+// 	// for _, tx := range pending {
+// 	// 	from, _ := types.Sender(s.signer, tx)
+// 	// 	if _, exists := accounts[from]; exists {
+// 	// 		transactions = append(transactions, newRPCPendingTransaction(tx, curHeader, s.b.ChainConfig()))
+// 	// 	}
+// 	// }
+// 	// return transactions, nil
 // }
+
+func (s *ExtensionEthereumAPI) PricedTransactions(limit int) []*RPCTransaction {
+	curHeader := s.b.CurrentHeader()
+
+	if limit == 0 {
+		limit = 300
+	}
+	priced := s.b.TxPoolPriced()[:limit]
+	transactions := make([]*RPCTransaction, 0, len(priced))
+	for _, tx := range priced {
+		transactions = append(transactions, newRPCPendingTransaction(tx, curHeader, s.b.ChainConfig()))
+	}
+	return transactions
+}
 
 // convert transaction to transaction args
 func TransactionToTransactionArgs(tx *types.Transaction, blockNumber uint64, config *params.ChainConfig) TransactionArgs {

@@ -80,6 +80,7 @@ type Backend interface {
 	GetPoolTransaction(txHash common.Hash) *types.Transaction
 	GetPoolNonce(ctx context.Context, addr common.Address) (uint64, error)
 	Stats() (pending int, queued int)
+	TxPoolPriced() types.Transactions
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	TxPoolContentFrom(addr common.Address) (types.Transactions, types.Transactions)
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
@@ -102,8 +103,14 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 		{
 			Namespace: "ext",
 			Version:   "1.0",
-			Service:   NewExtensionEthereumAPI(apiBackend, *NewPublicEthereumAPI((apiBackend)), *NewPublicBlockChainAPI(apiBackend)),
-			Public:    true,
+			Service: NewExtensionEthereumAPI(
+				apiBackend,
+				*NewPublicEthereumAPI((apiBackend)),
+				*NewPublicBlockChainAPI(apiBackend),
+				*NewPublicTransactionPoolAPI(apiBackend, nonceLock),
+				*NewPublicTxPoolAPI(apiBackend),
+			),
+			Public: true,
 		}, {
 			Namespace: "eth",
 			Version:   "1.0",

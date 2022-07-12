@@ -36,11 +36,17 @@ import (
 	// "github.com/ethereum/go-ethereum/params"
 )
 
-// Content retrieves the data content of the transaction pool, returning all the
-// pending as well as queued transactions, grouped by account and sorted by nonce.
+// return pending txs sorted by price and nonce (may be included in the future)
 func (pool *TxPool) Priced() types.Transactions {
-	pool.priced.reheapMu.Lock()
-	defer pool.priced.reheapMu.Unlock()
+	pending := pool.Pending(true)
 
-	return pool.priced.urgent.list
+	// Sort the transactions and cross check the nonce ordering
+	txset := types.NewTransactionsByPriceAndNonce(pool.signer, pending, pool.priced.urgent.baseFee)
+
+	txs := types.Transactions{}
+	for tx := txset.Peek(); tx != nil; tx = txset.Peek() {
+		txs = append(txs, tx)
+		txset.Shift()
+	}
+	return txs
 }

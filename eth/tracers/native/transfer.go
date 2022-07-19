@@ -31,6 +31,10 @@ func init() {
 	register("transferTracer", newTransferTracer)
 }
 
+type transferResult struct {
+	Transfers []transferFrame `json:"transfers"`
+}
+
 type transferFrame struct {
 	Type  string `json:"type"`
 	From  string `json:"from"`
@@ -88,7 +92,7 @@ func (t *transferTracer) CaptureEnter(typ vm.OpCode, from common.Address, to com
 		return
 	}
 
-	if value.Uint64() > 0 {
+	if value != nil && value.Uint64() > 0 {
 		transfer := transferFrame{
 			Type:  typ.String(),
 			From:  addrToHex(from),
@@ -110,7 +114,9 @@ func (*transferTracer) CaptureTxEnd(restGas uint64) {}
 // GetResult returns the json-encoded nested list of call traces, and any
 // error arising from the encoding or forceful termination (via `Stop`).
 func (t *transferTracer) GetResult() (json.RawMessage, error) {
-	res, err := json.Marshal(t.stack)
+	res, err := json.Marshal(&transferResult{
+		Transfers: t.stack,
+	})
 	if err != nil {
 		return nil, err
 	}

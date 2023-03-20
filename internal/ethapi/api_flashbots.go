@@ -32,6 +32,7 @@ import (
 	// "github.com/ethereum/go-ethereum/accounts/abi"
 	// "github.com/ethereum/go-ethereum/accounts/keystore"
 	// "github.com/ethereum/go-ethereum/accounts/scwallet"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -213,8 +214,14 @@ func (s *BundleAPI) CallBundle(ctx context.Context, args CallBundleArgs) (map[st
 		if result.Err != nil {
 			jsonResult["error"] = result.Err.Error()
 			revert := result.Revert()
+
 			if len(revert) > 0 {
-				jsonResult["revert"] = string(revert)
+				reason, errUnpack := abi.UnpackRevert(revert)
+				if errUnpack != nil {
+					jsonResult["revert"] = hexutil.Encode(result.Revert())
+				} else {
+					jsonResult["revert"] = reason
+				}
 			}
 		} else {
 			dst := make([]byte, hex.EncodedLen(len(result.Return())))

@@ -126,6 +126,15 @@ func GetAPIs(apiBackend Backend, chain *core.BlockChain) []rpc.API {
 		}, {
 			Namespace: "eth",
 			Service:   NewBundleAPI(apiBackend, chain),
+		}, {
+			Namespace: "ext",
+			Service: NewExtensionEthereumAPI(
+				apiBackend,
+				*NewEthereumAPI((apiBackend)),
+				*NewBlockChainAPI(apiBackend),
+				*NewTransactionAPI(apiBackend, nonceLock),
+				*NewTxPoolAPI(apiBackend),
+			),
 		},
 	}
 }

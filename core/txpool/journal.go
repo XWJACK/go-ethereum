@@ -164,7 +164,7 @@ func (journal *journal) rotate(all map[common.Address]types.Transactions) error 
 		return err
 	}
 	journal.writer = sink
-	log.Info("Regenerated local transaction journal", "transactions", journaled, "accounts", len(all))
+	// log.Info("Regenerated local transaction journal", "transactions", journaled, "accounts", len(all))
 
 	return nil
 }

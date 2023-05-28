@@ -120,7 +120,7 @@ func (api *ExtensionEthereumAPI) GetBlockReceipts(ctx context.Context, blockNrOr
 		return nil, err
 	}
 	// Derive the sender.
-	signer := types.MakeSigner(api.b.ChainConfig(), block.Number())
+	signer := types.MakeSigner(api.b.ChainConfig(), block.Number(), block.Time())
 
 	txs := block.Transactions()
 

@@ -35,10 +35,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 
 	"github.com/ethereum/go-ethereum/common/math"
 	// "github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/consensus/misc"
+
 	"github.com/ethereum/go-ethereum/core"
 
 	// "github.com/ethereum/go-ethereum/core/state"
@@ -142,7 +143,7 @@ func (s *BundleAPI) CallBundle(ctx context.Context, args CallBundleArgs) (map[st
 	if args.BaseFee != nil {
 		baseFee = args.BaseFee
 	} else if s.b.ChainConfig().IsLondon(big.NewInt(args.BlockNumber.Int64())) {
-		baseFee = misc.CalcBaseFee(s.b.ChainConfig(), parent)
+		baseFee = eip1559.CalcBaseFee(s.b.ChainConfig(), parent)
 	}
 	header := &types.Header{
 		ParentHash: parent.Hash(),

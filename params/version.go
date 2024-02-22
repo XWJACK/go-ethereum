@@ -23,7 +23,7 @@ import (
 const (
 	VersionMajor = 1              // Major version component of the current release
 	VersionMinor = 13             // Minor version component of the current release
-	VersionPatch = 12             // Patch version component of the current release
+	VersionPatch = 13             // Patch version component of the current release
 	VersionMeta  = "xwjack.0.0.1" // Version metadata to append to the version string
 )
 
